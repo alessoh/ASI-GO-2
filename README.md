@@ -12,6 +12,7 @@ ASI-GO adapts the four-component architecture from ASI-ARCH:
 - **Engineer**: Implements and tests solutions
 - **Analyst**: Analyzes results and extracts insights
 
+![Alt text](./ASI-GO-Architecture.png)
 ## Setup
 
 1. **Install Dependencies**:
