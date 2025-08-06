@@ -40,7 +40,7 @@ anthropic
 Interactive Mode
 bashpython main.py
 Command Line Mode
-bashpython main.py "Find the first 40 prime numbers"
+python main.py "Find the first 100 prime numbers"
 Features
 
 ## Multi-LLM Support: Works with ChatGPT, Gemini, or Claude
@@ -88,6 +88,11 @@ LOG_LEVEL: Logging detail (INFO/DEBUG)
 API Key Errors: Ensure your API key is correctly set in .env
 Import Errors: Run pip install -r requirements.txt
 Execution Timeouts: Complex problems may need increased timeout in engineer.py
+
+## LLM Library Compatibility
+
+### OpenAI Library Version Conflicts
+When installing ASI-GO, you may encounter a `TypeError: Client.__init__() got an unexpected keyword argument 'proxies'` error. This occurs due to version conflicts between the OpenAI, Anthropic, and httpx libraries. The issue arises because different LLM providers require different versions of the shared httpx dependency. To resolve this, uninstall all LLM-related packages first (`pip uninstall openai anthropic google-generativeai httpx httpcore anyio -y`), then install httpx version 0.24.1 specifically (`pip install httpx==0.24.1`), followed by the OpenAI library (`pip install openai==1.12.0`). If you need multiple LLM providers, install them in this specific order to maintain compatibility. Alternatively, consider using separate conda environments for different LLM providers to avoid conflicts entirely.
 
 ## License
 MIT License - Feel free to modify and extend!
