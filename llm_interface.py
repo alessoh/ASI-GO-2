@@ -26,11 +26,13 @@ class LLMInterface:
         """Initialize the selected LLM provider"""
         try:
             if self.provider == "openai":
-                import openai
+                from openai import OpenAI
                 api_key = os.getenv("OPENAI_API_KEY")
                 if not api_key:
                     raise ValueError("OPENAI_API_KEY not found in .env file")
-                self.client = openai.OpenAI(api_key=api_key)
+                
+                # Use the correct OpenAI client initialization for v1.x
+                self.client = OpenAI(api_key=api_key)
                 self.model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
                 
             elif self.provider == "google":
@@ -82,7 +84,6 @@ class LLMInterface:
                 return response.text
                 
             elif self.provider == "anthropic":
-                messages = []
                 full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
                 
                 response = self.client.messages.create(
@@ -104,4 +105,3 @@ class LLMInterface:
             "model": self.model,
             "temperature": str(self.temperature)
         }
-        
