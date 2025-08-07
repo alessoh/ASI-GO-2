@@ -4,6 +4,7 @@ Main orchestrator for the problem-solving system
 """
 import os
 import sys
+import time
 from typing import Optional
 from colorama import init, Fore, Style
 from dotenv import load_dotenv
@@ -63,6 +64,18 @@ class ASIGO:
             self.logger.error(f"Initialization failed: {e}")
             sys.exit(1)
     
+    def warm_up_llm(self):
+        """Warm up the LLM connection to prevent initial connection issues"""
+        try:
+            self.logger.info("Warming up LLM connection...")
+            # Make a simple test query
+            response = self.llm.query("Respond with 'ready'", max_tokens=10)
+            self.logger.info("LLM warm-up successful")
+            return True
+        except Exception as e:
+            self.logger.warning(f"LLM warm-up failed: {e}")
+            return False
+    
     def solve_problem(self, goal: str) -> bool:
         """Main problem-solving loop"""
         print_header(f"Solving: {goal}")
@@ -81,13 +94,21 @@ class ASIGO:
             try:
                 # 1. Researcher proposes solution
                 print_step("Research", "Generating solution proposal...")
+                
+                # Handle case where we need to generate a new proposal vs refine
                 if iteration == 1:
                     proposal = self.researcher.propose_solution(goal)
                 else:
-                    proposal = self.researcher.refine_proposal(
-                        self.researcher.proposal_history[-1], 
-                        previous_attempt
-                    )
+                    # Check if we have a previous proposal to refine
+                    if not self.researcher.proposal_history:
+                        print(f"   {Fore.YELLOW}⚠ No previous proposal found, generating new one")
+                        proposal = self.researcher.propose_solution(goal)
+                    else:
+                        proposal = self.researcher.refine_proposal(
+                            self.researcher.proposal_history[-1], 
+                            previous_attempt
+                        )
+                
                 print(f"   {Fore.GREEN}✓ Proposal generated")
                 
                 # Save checkpoint
@@ -139,7 +160,15 @@ class ASIGO:
             except Exception as e:
                 self.logger.error(f"Error in iteration {iteration}: {e}")
                 print(f"\n{Fore.RED}✗ Error in iteration: {e}")
+                
+                # Set up for retry
                 previous_attempt = {"error": str(e)}
+                
+                # For connection errors, wait before retrying
+                if "Connection error" in str(e):
+                    wait_time = min(5 * iteration, 30)  # Exponential backoff, max 30s
+                    print(f"{Fore.YELLOW}⏳ Waiting {wait_time} seconds before retry...")
+                    time.sleep(wait_time)
         
         # Generate final report
         print_header("Final Report")
@@ -161,6 +190,16 @@ class ASIGO:
         print_header("ASI-GO Interactive Mode")
         print("Enter your problem-solving goals. Type 'exit' to quit.\n")
         
+        # Warm up the LLM connection
+        print("Warming up LLM connection...")
+        warm_up_success = self.warm_up_llm()
+        if warm_up_success:
+            print(f"{Fore.GREEN}✓ LLM connection ready\n")
+        else:
+            print(f"{Fore.YELLOW}⚠ LLM warm-up failed, but continuing...\n")
+            # Add extra delay if warm-up failed
+            time.sleep(2)
+        
         while True:
             try:
                 goal = input(f"{Fore.CYAN}Enter your goal: {Style.RESET_ALL}").strip()
@@ -172,6 +211,9 @@ class ASIGO:
                 if not goal:
                     print(f"{Fore.RED}Please enter a valid goal.")
                     continue
+                
+                # Add a small delay to ensure everything is ready
+                time.sleep(0.5)
                 
                 # Solve the problem
                 success = self.solve_problem(goal)
@@ -190,6 +232,14 @@ class ASIGO:
             except Exception as e:
                 print(f"\n{Fore.RED}Error: {e}")
                 self.logger.error(f"Interactive mode error: {e}")
+                
+                # Ask if user wants to continue after error
+                try:
+                    retry_choice = input(f"\n{Fore.CYAN}Try again? (y/n): {Style.RESET_ALL}")
+                    if retry_choice.lower() != 'y':
+                        break
+                except:
+                    break
 
 def main():
     """Main entry point"""
